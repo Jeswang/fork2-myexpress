@@ -9,8 +9,9 @@ var express = function (){
   app.listen = function(port, done){
     var http = require("http");
     var server = http.createServer(this);
-    server.listen(port); 
-    done();
+    server.listen(port, function(){
+      done();
+    }); 
     return server;
   }
   return app;
