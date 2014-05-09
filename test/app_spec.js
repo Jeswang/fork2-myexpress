@@ -16,4 +16,26 @@ describe("app",function() {
       });
     })   
   });
+
+  describe("calling middleware stack",function() {
+    it('should return m2', function(done){
+      var app = express();
+      var m1 = function(req,res,next) {
+        next();
+      };
+      var m2 = function(req,res,next) {
+        res.end("m2");
+      };
+      app.use(m1);
+      app.use(m2);
+      // test cases
+      request(app)
+      .get('/foo')
+      .expect('m2')
+      .end(function(err, res){
+        if (err) throw err;
+        done();
+      });
+    });
+  });
 });
