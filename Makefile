@@ -14,5 +14,11 @@ lesson5:
 	mocha verify -R spec -g 'The middlewares called should match request path'
 	mocha verify -R spec -g 'The error handlers called should match request path:'
 
+lesson6:
+	mocha verify -R spec -g 'Path parameters extraction'
+	mocha verify -R spec -g "Implement req.params"
+	mocha verify -R spec -g "app should have the handle method"
+	mocha verify -R spec -g "Prefix path trimming"
+
 mytest:
 	mocha -R spec -g 'calling middleware stack'

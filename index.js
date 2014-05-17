@@ -27,7 +27,7 @@ var express = function (){
   }
 
   app.handle = function(req, res, out){
-    index = 0;
+    var index = 0;
     function next(error){
       var layer = stack[index];
       index++;
@@ -56,18 +56,23 @@ var express = function (){
       try{
         var currentFunction = layer.handle;
         var url = req.url;
+        req.params = {};
+        matchResult = layer.match(url);
         if(error){
-          if(isErrorHandler(currentFunction) && undefined != layer.match(url)){
+          if(isErrorHandler(currentFunction) && undefined != matchResult){
             //console.log("Run error function" + currentFunction.toString());
+            req.params = matchResult.params;
             currentFunction(error, req, res, next);
           }
           else
             next(error);
         }
         else{
-          if(!isErrorHandler(currentFunction) && undefined != layer.match(url))
+          if(!isErrorHandler(currentFunction) && undefined != matchResult){
             //console.log("Run normal function" + currentFunction.toString());
+            req.params = matchResult.params;
             currentFunction(req, res, next);
+          }
           else
             next();
         }
@@ -77,6 +82,7 @@ var express = function (){
     }
     next();
   };
+
   app.listen = function(port, done){
     var http = require("http");
     var server = http.createServer(this);
@@ -85,24 +91,37 @@ var express = function (){
     }); 
     return server;
   }
+
   app.use = function(fn, fn2){
     //Add Child handle
-    if ('function' == typeof fn.handle) {
-      var server = fn;
-      fn = function(req, res, next){
-        server.handle(req, res, next);
-      };
-    }
-    else if ('function' == typeof fn2){
-      var layer = new Layer(fn, fn2);
-      fn = layer;
+    var middleWare;
+    var filter;
+    if (undefined == fn2){
+      filter = '/';
+      middleWare = fn;
     }
     else{
-      var layer = new Layer('/', fn);
-      fn = layer;
+      filter = fn;
+      middleWare = fn2;
     }
 
-    stack.push(fn);
+    var layer;
+    if ('function' == typeof middleWare.handle) {
+      var server = middleWare;
+      middleWare = function(req, res, next){
+        var reg = new RegExp(filter,"g");
+        var outUrl = req.url;
+        req.url = req.url.replace(reg, "");
+        server.handle(req, res, function(error){
+          req.url = outUrl;
+          next(error);
+        });
+      };
+    }
+
+    layer = new Layer(filter, middleWare);
+
+    stack.push(layer);
 
     return this;
   }

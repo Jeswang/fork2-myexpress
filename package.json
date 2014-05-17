@@ -12,5 +12,8 @@
     "supertest": "0.10.0"
   },
   "author": "Esay",
-  "license": "BSD"
+  "license": "BSD",
+  "dependencies": {
+    "path-to-regexp": "~0.1.2"
+  }
 }
