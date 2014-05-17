@@ -1,5 +1,8 @@
 
+Layer = require('./lib/layer');
+
 var STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/mg;
+
 function getParamNames(func) {
   var fnStr = func.toString().replace(STRIP_COMMENTS, '');
   var result = fnStr.slice(fnStr.indexOf('(')+1, fnStr.indexOf(')')).match(/([^\s,]+)/g);
@@ -23,13 +26,12 @@ var express = function (){
     app.handle(req, res, next);
   }
 
-
   app.handle = function(req, res, out){
     index = 0;
     function next(error){
-      currentFunction = stack[index];
+      var layer = stack[index];
       index++;
-      if(!currentFunction||res.headersSent){
+      if(!layer||res.headersSent){
         if (out) {
           console.log("Pass to parent");
           return out(error);
@@ -52,17 +54,19 @@ var express = function (){
         return;
       }
       try{
+        var currentFunction = layer.handle;
+        var url = req.url;
         if(error){
-          if(isErrorHandler(currentFunction)){
-            console.log("Run error function" + currentFunction.toString());
+          if(isErrorHandler(currentFunction) && undefined != layer.match(url)){
+            //console.log("Run error function" + currentFunction.toString());
             currentFunction(error, req, res, next);
           }
           else
             next(error);
         }
         else{
-          console.log("Run normal function" + currentFunction.toString());
-          if(!isErrorHandler(currentFunction))
+          if(!isErrorHandler(currentFunction) && undefined != layer.match(url))
+            //console.log("Run normal function" + currentFunction.toString());
             currentFunction(req, res, next);
           else
             next();
@@ -81,19 +85,28 @@ var express = function (){
     }); 
     return server;
   }
-  app.use = function(fn){
-
+  app.use = function(fn, fn2){
+    //Add Child handle
     if ('function' == typeof fn.handle) {
       var server = fn;
       fn = function(req, res, next){
         server.handle(req, res, next);
       };
     }
+    else if ('function' == typeof fn2){
+      var layer = new Layer(fn, fn2);
+      fn = layer;
+    }
+    else{
+      var layer = new Layer('/', fn);
+      fn = layer;
+    }
 
     stack.push(fn);
 
     return this;
   }
+  app.stack = stack;
   return app;
 }
 
